@@ -1,0 +1,79 @@
+# CloudSnap KCC Demo - Raw Uploads Bucket
+# This bucket stores original uploaded media files
+
+apiVersion: storage.cnrm.cloud.google.com/v1beta1
+kind: StorageBucket
+metadata:
+  name: cloudsnap-raw-uploads
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: storage
+    tier: raw
+spec:
+  # Bucket location - use multi-region for higher availability
+  location: US
+  
+  # Storage class for frequently accessed data
+  storageClass: STANDARD
+  
+  # Enable uniform bucket-level access (recommended)
+  uniformBucketLevelAccess: true
+  
+  # Versioning for data protection
+  versioning:
+    enabled: true
+  
+  # CORS configuration for direct browser uploads
+  cors:
+    - origin:
+        - "*"  # Configure specific origins in production
+      method:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      responseHeader:
+        - Content-Type
+        - Content-Length
+        - Content-MD5
+        - x-goog-resumable
+      maxAgeSeconds: 3600
+  
+  # Lifecycle rules for cost optimization
+  lifecycleRule:
+    # Move to Nearline after 30 days
+    - action:
+        type: SetStorageClass
+        storageClass: NEARLINE
+      condition:
+        age: 30
+        matchesStorageClass:
+          - STANDARD
+    # Move to Coldline after 90 days
+    - action:
+        type: SetStorageClass
+        storageClass: COLDLINE
+      condition:
+        age: 90
+        matchesStorageClass:
+          - NEARLINE
+    # Delete after 365 days (adjust based on retention requirements)
+    - action:
+        type: Delete
+      condition:
+        age: 365
+    # Delete non-current versions after 30 days
+    - action:
+        type: Delete
+      condition:
+        numNewerVersions: 3
+  
+  # Enable Pub/Sub notifications for new uploads
+  # Note: Notification configuration is handled separately via StorageNotification
+  
+  # Public access prevention
+  publicAccessPrevention: enforced

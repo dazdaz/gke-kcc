@@ -1,0 +1,93 @@
+# CloudSnap KCC Demo - Cloud Run API Service
+# REST API for frontend operations
+
+apiVersion: run.cnrm.cloud.google.com/v1beta1
+kind: RunService
+metadata:
+  name: cloudsnap-api
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+    # Allow unauthenticated access (for demo - restrict in production)
+    run.googleapis.com/ingress: all
+  labels:
+    app: cloudsnap
+    component: api
+spec:
+  # Service location
+  location: us-central1
+  
+  # Ingress settings
+  ingress: INGRESS_TRAFFIC_ALL
+  
+  # Service template
+  template:
+    # Container concurrency
+    maxInstanceRequestConcurrency: 80
+    
+    # Request timeout
+    timeout: "300s"
+    
+    # Service account for Workload Identity
+    serviceAccountRef:
+      external: "cloudsnap-api@${PROJECT_ID}.iam.gserviceaccount.com"
+    
+    # Scaling configuration
+    scaling:
+      minInstanceCount: 0
+      maxInstanceCount: 10
+    
+    containers:
+      - name: api
+        # Using sample image for demo - replace with your actual image
+        image: gcr.io/cloudrun/hello
+        
+        # Resource limits
+        resources:
+          limits:
+            cpu: "1"
+            memory: 512Mi
+        
+        # Container ports
+        ports:
+          - containerPort: 8080
+            name: http1
+        
+        # Environment variables
+        env:
+          - name: PROJECT_ID
+            value: "${PROJECT_ID}"
+          - name: RAW_BUCKET
+            value: "cloudsnap-raw-uploads"
+          - name: PROCESSED_BUCKET
+            value: "cloudsnap-processed"
+          - name: THUMBNAILS_BUCKET
+            value: "cloudsnap-thumbnails"
+          - name: FIRESTORE_DATABASE
+            value: "cloudsnap-db"
+          - name: UPLOAD_TOPIC
+            value: "cloudsnap-upload-notifications"
+        
+        # Startup probe
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          failureThreshold: 3
+          timeoutSeconds: 5
+        
+        # Liveness probe
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          periodSeconds: 10
+          failureThreshold: 3
+          timeoutSeconds: 5
+  
+  # Traffic routing
+  traffic:
+    - percent: 100
+      type: TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST

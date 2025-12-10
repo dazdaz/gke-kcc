@@ -1,0 +1,141 @@
+# CloudSnap KCC Demo - Monitoring Dashboard
+# Custom dashboard for operational visibility
+
+apiVersion: monitoring.cnrm.cloud.google.com/v1beta1
+kind: MonitoringDashboard
+metadata:
+  name: cloudsnap-dashboard
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: monitoring
+spec:
+  displayName: "CloudSnap Processing Dashboard"
+  
+  # Dashboard layout using gridLayout
+  gridLayout:
+    columns: 2
+    widgets:
+      - title: "Upload Count (per minute)"
+        xyChart:
+          dataSets:
+            - timeSeriesQuery:
+                timeSeriesFilter:
+                  filter: 'resource.type="gcs_bucket" AND metric.type="storage.googleapis.com/storage/object_count"'
+                  aggregation:
+                    alignmentPeriod: "60s"
+                    perSeriesAligner: ALIGN_RATE
+              plotType: LINE
+          timeshiftDuration: "0s"
+          yAxis:
+            label: "Objects/min"
+            scale: LINEAR
+      - title: "Storage Used by Bucket"
+        xyChart:
+          dataSets:
+            - timeSeriesQuery:
+                timeSeriesFilter:
+                  filter: 'resource.type="gcs_bucket" AND metric.type="storage.googleapis.com/storage/total_bytes"'
+                  aggregation:
+                    alignmentPeriod: "3600s"
+                    perSeriesAligner: ALIGN_MEAN
+                    crossSeriesReducer: REDUCE_SUM
+                    groupByFields:
+                      - "resource.labels.bucket_name"
+              plotType: STACKED_AREA
+          yAxis:
+            label: "Bytes"
+            scale: LINEAR
+      - title: "Pub/Sub Message Count"
+        xyChart:
+          dataSets:
+            - timeSeriesQuery:
+                timeSeriesFilter:
+                  filter: 'resource.type="pubsub_topic" AND metric.type="pubsub.googleapis.com/topic/send_message_operation_count"'
+                  aggregation:
+                    alignmentPeriod: "60s"
+                    perSeriesAligner: ALIGN_RATE
+              plotType: LINE
+          yAxis:
+            label: "Messages/sec"
+            scale: LINEAR
+      - title: "Pub/Sub Unacked Messages"
+        xyChart:
+          dataSets:
+            - timeSeriesQuery:
+                timeSeriesFilter:
+                  filter: 'resource.type="pubsub_subscription" AND metric.type="pubsub.googleapis.com/subscription/num_undelivered_messages"'
+                  aggregation:
+                    alignmentPeriod: "60s"
+                    perSeriesAligner: ALIGN_MEAN
+                    groupByFields:
+                      - "resource.labels.subscription_id"
+              plotType: LINE
+          yAxis:
+            label: "Messages"
+            scale: LINEAR
+      - title: "Cloud Run Request Count"
+        xyChart:
+          dataSets:
+            - timeSeriesQuery:
+                timeSeriesFilter:
+                  filter: 'resource.type="cloud_run_revision" AND metric.type="run.googleapis.com/request_count"'
+                  aggregation:
+                    alignmentPeriod: "60s"
+                    perSeriesAligner: ALIGN_RATE
+                    groupByFields:
+                      - "resource.labels.service_name"
+              plotType: LINE
+          yAxis:
+            label: "Requests/sec"
+            scale: LINEAR
+      - title: "Cloud Run Latency (p95)"
+        xyChart:
+          dataSets:
+            - timeSeriesQuery:
+                timeSeriesFilter:
+                  filter: 'resource.type="cloud_run_revision" AND metric.type="run.googleapis.com/request_latencies"'
+                  aggregation:
+                    alignmentPeriod: "60s"
+                    perSeriesAligner: ALIGN_PERCENTILE_95
+              plotType: LINE
+          yAxis:
+            label: "Latency (ms)"
+            scale: LINEAR
+      - title: "Cloud Run Error Rate"
+        xyChart:
+          dataSets:
+            - timeSeriesQuery:
+                timeSeriesFilter:
+                  filter: 'resource.type="cloud_run_revision" AND metric.type="run.googleapis.com/request_count" AND metric.labels.response_code_class!="2xx"'
+                  aggregation:
+                    alignmentPeriod: "60s"
+                    perSeriesAligner: ALIGN_RATE
+                    groupByFields:
+                      - "metric.labels.response_code_class"
+              plotType: STACKED_BAR
+          yAxis:
+            label: "Errors/sec"
+            scale: LINEAR
+      - title: "Firestore Operations"
+        xyChart:
+          dataSets:
+            - timeSeriesQuery:
+                timeSeriesFilter:
+                  filter: 'resource.type="firestore_database" AND metric.type="firestore.googleapis.com/document/read_count"'
+                  aggregation:
+                    alignmentPeriod: "60s"
+                    perSeriesAligner: ALIGN_RATE
+              plotType: LINE
+            - timeSeriesQuery:
+                timeSeriesFilter:
+                  filter: 'resource.type="firestore_database" AND metric.type="firestore.googleapis.com/document/write_count"'
+                  aggregation:
+                    alignmentPeriod: "60s"
+                    perSeriesAligner: ALIGN_RATE
+              plotType: LINE
+          yAxis:
+            label: "Operations/sec"
+            scale: LINEAR

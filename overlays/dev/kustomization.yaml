@@ -1,0 +1,121 @@
+# CloudSnap KCC Demo - Development Environment Overlay
+# Smaller resources, shorter retention, cost-optimized settings
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: cloudsnap-dev
+
+# Reference the base configuration
+resources:
+  - ../../infrastructure
+
+# Environment-specific labels
+labels:
+  - pairs:
+      environment: dev
+
+# Namespace override (optional)
+namespace: cloudsnap-dev
+
+# Patches for dev-specific configurations
+patches:
+  # Reduce storage retention for dev
+  - target:
+      kind: StorageBucket
+      name: cloudsnap-raw-uploads
+    patch: |-
+      - op: replace
+        path: /spec/lifecycleRule/0/condition/age
+        value: 7
+      - op: replace
+        path: /spec/lifecycleRule/1/condition/age
+        value: 14
+      - op: replace
+        path: /spec/lifecycleRule/2/condition/age
+        value: 30
+
+  - target:
+      kind: StorageBucket
+      name: cloudsnap-processed
+    patch: |-
+      - op: replace
+        path: /spec/lifecycleRule/0/condition/age
+        value: 14
+      - op: replace
+        path: /spec/lifecycleRule/1/condition/age
+        value: 30
+      - op: replace
+        path: /spec/lifecycleRule/2/condition/age
+        value: 60
+
+  - target:
+      kind: StorageBucket
+      name: cloudsnap-thumbnails
+    patch: |-
+      - op: replace
+        path: /spec/lifecycleRule/0/condition/age
+        value: 7
+      - op: replace
+        path: /spec/lifecycleRule/1/condition/age
+        value: 30
+
+  # Reduce Pub/Sub retention for dev
+  - target:
+      kind: PubSubTopic
+    patch: |-
+      - op: replace
+        path: /spec/messageRetentionDuration
+        value: "86400s"
+
+  - target:
+      kind: PubSubSubscription
+    patch: |-
+      - op: replace
+        path: /spec/messageRetentionDuration
+        value: "86400s"
+
+  # Smaller Cloud Run resources for dev
+  # Note: Cloud Run requires cpu >= 1 when concurrency > 1
+  - target:
+      kind: RunService
+      name: cloudsnap-api
+    patch: |-
+      - op: replace
+        path: /spec/template/containers/0/resources/limits/cpu
+        value: "1"
+      - op: replace
+        path: /spec/template/containers/0/resources/limits/memory
+        value: 512Mi
+      - op: replace
+        path: /spec/template/scaling/maxInstanceCount
+        value: 3
+
+  - target:
+      kind: RunJob
+      name: cloudsnap-processor
+    patch: |-
+      - op: replace
+        path: /spec/template/template/containers/0/resources/limits/cpu
+        value: "1"
+      - op: replace
+        path: /spec/template/template/containers/0/resources/limits/memory
+        value: 1Gi
+
+  # Shorter BigQuery partition expiration (30 days)
+  - target:
+      kind: BigQueryDataset
+      name: cloudsnap-analytics
+    patch: |-
+      - op: replace
+        path: /spec/defaultPartitionExpirationMs
+        value: 2592000000
+
+# ConfigMap for environment-specific values
+configMapGenerator:
+  - name: cloudsnap-config
+    literals:
+      - PROJECT_ID=${PROJECT_ID}
+      - ENVIRONMENT=dev
+      - LOG_LEVEL=debug

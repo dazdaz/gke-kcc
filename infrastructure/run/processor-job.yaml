@@ -1,0 +1,124 @@
+# CloudSnap KCC Demo - Cloud Run Job for Media Processing
+# Processes uploaded media files: resizing, optimization, thumbnail generation
+
+apiVersion: run.cnrm.cloud.google.com/v1beta1
+kind: RunJob
+metadata:
+  name: cloudsnap-processor
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: processor
+spec:
+  # Job location
+  location: us-central1
+  
+  # Launch stage
+  launchStage: GA
+  
+  # Job template
+  template:
+    # Task count per execution
+    taskCount: 1
+    
+    # Parallelism
+    parallelism: 1
+    
+    template:
+      # Maximum retries per task
+      maxRetries: 3
+      
+      # Task timeout
+      timeout: "600s"
+      
+      # Service account
+      serviceAccountRef:
+        external: "cloudsnap-processor@${PROJECT_ID}.iam.gserviceaccount.com"
+      
+      # Execution environment
+      executionEnvironment: EXECUTION_ENVIRONMENT_GEN2
+      
+      containers:
+        - name: processor
+          # Using sample image for demo - replace with your actual image
+          image: gcr.io/cloudrun/hello
+          
+          # Resource limits
+          resources:
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          
+          # Environment variables
+          env:
+            - name: PROJECT_ID
+              value: "${PROJECT_ID}"
+            - name: RAW_BUCKET
+              value: "cloudsnap-raw-uploads"
+            - name: PROCESSED_BUCKET
+              value: "cloudsnap-processed"
+            - name: THUMBNAILS_BUCKET
+              value: "cloudsnap-thumbnails"
+            - name: FIRESTORE_DATABASE
+              value: "cloudsnap-db"
+            - name: PROCESSING_SUBSCRIPTION
+              value: "cloudsnap-processing-sub"
+            # Thumbnail sizes to generate
+            - name: THUMBNAIL_SIZES
+              value: "128,256,512"
+            # Maximum image dimension for processed images
+            - name: MAX_DIMENSION
+              value: "2048"
+            # Output quality for JPEG
+            - name: JPEG_QUALITY
+              value: "85"
+          
+          # Volume mounts for temporary storage
+          volumeMounts:
+            - name: temp-storage
+              mountPath: /tmp/processing
+      
+      # Volumes
+      volumes:
+        - name: temp-storage
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Gi
+---
+# Eventarc trigger to invoke the job on Pub/Sub messages
+apiVersion: eventarc.cnrm.cloud.google.com/v1beta1
+kind: EventarcTrigger
+metadata:
+  name: cloudsnap-processor-trigger
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: processor
+spec:
+  location: us-central1
+  
+  # Matching criteria
+  matchingCriteria:
+    - attribute: type
+      value: google.cloud.pubsub.topic.v1.messagePublished
+  
+  # Transport configuration
+  transport:
+    pubsub:
+      topicRef:
+        name: cloudsnap-upload-notifications
+  
+  # Destination
+  destination:
+    cloudRunService:
+      serviceRef:
+        name: cloudsnap-processor
+      region: us-central1
+  
+  # Service account for the trigger
+  serviceAccountRef:
+    external: "cloudsnap-processor@${PROJECT_ID}.iam.gserviceaccount.com"

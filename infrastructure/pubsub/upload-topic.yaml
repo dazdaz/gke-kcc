@@ -1,0 +1,48 @@
+# CloudSnap KCC Demo - Upload Notifications Topic
+# This Pub/Sub topic receives notifications when files are uploaded
+
+apiVersion: pubsub.cnrm.cloud.google.com/v1beta1
+kind: PubSubTopic
+metadata:
+  name: cloudsnap-upload-notifications
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: messaging
+    purpose: upload-notifications
+spec:
+  # Message retention duration (how long unacknowledged messages are kept)
+  messageRetentionDuration: "604800s"  # 7 days
+  
+  # Schema settings (optional - can add schema validation later)
+  # schemaSettings:
+  #   schemaRef:
+  #     name: cloudsnap-upload-schema
+  #   encoding: JSON
+---
+# Storage notification to trigger Pub/Sub on new uploads
+apiVersion: storage.cnrm.cloud.google.com/v1beta1
+kind: StorageNotification
+metadata:
+  name: cloudsnap-upload-notification
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: storage
+spec:
+  bucketRef:
+    name: cloudsnap-raw-uploads
+  topicRef:
+    name: cloudsnap-upload-notifications
+  # Notify on object creation and metadata updates
+  eventTypes:
+    - OBJECT_FINALIZE
+    - OBJECT_METADATA_UPDATE
+  # Optional: filter by object name prefix
+  # objectNamePrefix: "uploads/"
+  # Payload format
+  payloadFormat: JSON_API_V1

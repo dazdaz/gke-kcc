@@ -1,0 +1,83 @@
+# CloudSnap KCC Demo - Processing Subscription
+# This subscription delivers messages to the media processor
+
+apiVersion: pubsub.cnrm.cloud.google.com/v1beta1
+kind: PubSubSubscription
+metadata:
+  name: cloudsnap-processing-sub
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: messaging
+    purpose: processing-queue
+spec:
+  topicRef:
+    name: cloudsnap-upload-notifications
+  
+  # Acknowledgment deadline - how long the processor has to acknowledge
+  ackDeadlineSeconds: 60
+  
+  # Message retention - how long to keep unacknowledged messages
+  messageRetentionDuration: "604800s"  # 7 days
+  
+  # Retain acknowledged messages for replay capability
+  retainAckedMessages: true
+  
+  # Expiration policy - subscription won't expire if actively used
+  expirationPolicy:
+    ttl: ""  # Never expire
+  
+  # Dead letter policy - move messages that fail processing
+  deadLetterPolicy:
+    deadLetterTopicRef:
+      name: cloudsnap-dead-letter
+    maxDeliveryAttempts: 5
+  
+  # Retry policy for transient failures
+  retryPolicy:
+    minimumBackoff: "10s"
+    maximumBackoff: "600s"  # 10 minutes
+  
+  # Enable exactly-once delivery (requires compatible client)
+  enableExactlyOnceDelivery: true
+  
+  # Filter to only receive specific message types (optional)
+  # filter: 'attributes.eventType = "OBJECT_FINALIZE"'
+---
+# Dead letter topic for failed messages
+apiVersion: pubsub.cnrm.cloud.google.com/v1beta1
+kind: PubSubTopic
+metadata:
+  name: cloudsnap-dead-letter
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: messaging
+    purpose: dead-letter
+spec:
+  messageRetentionDuration: "604800s"  # 7 days
+---
+# Subscription to monitor dead letter messages
+apiVersion: pubsub.cnrm.cloud.google.com/v1beta1
+kind: PubSubSubscription
+metadata:
+  name: cloudsnap-dead-letter-sub
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: messaging
+    purpose: dead-letter-monitoring
+spec:
+  topicRef:
+    name: cloudsnap-dead-letter
+  ackDeadlineSeconds: 60
+  messageRetentionDuration: "604800s"
+  retainAckedMessages: true
+  expirationPolicy:
+    ttl: ""

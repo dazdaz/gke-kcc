@@ -1,0 +1,75 @@
+# Kustomize configuration for handling KCC-specific fields
+# This tells Kustomize which fields contain references that need to be transformed
+
+nameReference:
+  - kind: StorageBucket
+    group: storage.cnrm.cloud.google.com
+    fieldSpecs:
+      - path: spec/bucketRef/name
+        kind: StorageNotification
+      - path: spec/resourceRef/name
+        kind: IAMPolicyMember
+
+  - kind: PubSubTopic
+    group: pubsub.cnrm.cloud.google.com
+    fieldSpecs:
+      - path: spec/topicRef/name
+        kind: PubSubSubscription
+      - path: spec/topicRef/name
+        kind: StorageNotification
+      - path: spec/resourceRef/name
+        kind: IAMPolicyMember
+      - path: spec/transport/pubsub/topicRef/name
+        kind: EventarcTrigger
+
+  - kind: PubSubSubscription
+    group: pubsub.cnrm.cloud.google.com
+    fieldSpecs:
+      - path: spec/resourceRef/name
+        kind: IAMPolicyMember
+
+  - kind: IAMServiceAccount
+    group: iam.cnrm.cloud.google.com
+    fieldSpecs:
+      - path: spec/resourceRef/name
+        kind: IAMPolicyMember
+
+  - kind: SecretManagerSecret
+    group: secretmanager.cnrm.cloud.google.com
+    fieldSpecs:
+      - path: spec/secretRef/name
+        kind: SecretManagerSecretVersion
+      - path: spec/resourceRef/name
+        kind: IAMPolicyMember
+
+  - kind: BigQueryDataset
+    group: bigquery.cnrm.cloud.google.com
+    fieldSpecs:
+      - path: spec/datasetRef/name
+        kind: BigQueryTable
+
+  - kind: FirestoreDatabase
+    group: firestore.cnrm.cloud.google.com
+    fieldSpecs:
+      - path: spec/databaseRef/name
+        kind: FirestoreIndex
+
+  - kind: RunService
+    group: run.cnrm.cloud.google.com
+    fieldSpecs:
+      - path: spec/destination/cloudRunService/serviceRef/name
+        kind: EventarcTrigger
+
+  - kind: RunJob
+    group: run.cnrm.cloud.google.com
+    fieldSpecs:
+      - path: spec/destination/cloudRunService/serviceRef/name
+        kind: EventarcTrigger
+
+varReference:
+  - path: spec/member
+    kind: IAMPolicyMember
+  - path: metadata/annotations/cnrm.cloud.google.com/project-id
+    kind: Namespace
+  - path: spec/googleServiceAccount
+    kind: ConfigConnectorContext

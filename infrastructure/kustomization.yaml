@@ -1,0 +1,74 @@
+# CloudSnap KCC Demo - Kustomize Base Configuration
+# This file aggregates all KCC resources for deployment
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: cloudsnap-infrastructure
+
+# Common labels applied to all resources
+labels:
+  - pairs:
+      app: cloudsnap
+      managed-by: kcc
+      part-of: cloudsnap-demo
+
+# Common annotations
+commonAnnotations:
+  cnrm.cloud.google.com/state-into-spec: absent
+
+# Namespace for all resources
+namespace: cloudsnap
+
+# Resources in dependency order
+resources:
+  # 1. Namespace and Config Connector context
+  - namespace.yaml
+  
+  # 2. IAM Service Accounts (needed first for bindings)
+  - iam/service-accounts.yaml
+  
+  # 3. Storage buckets
+  - storage/raw-bucket.yaml
+  - storage/processed-bucket.yaml
+  - storage/thumbnails-bucket.yaml
+  
+  # 4. Pub/Sub topics and subscriptions
+  - pubsub/upload-topic.yaml
+  - pubsub/processing-subscription.yaml
+  - pubsub/analytics-subscription.yaml
+  
+  # 5. Secret Manager secrets
+  - secrets/api-secrets.yaml
+  
+  # 6. Databases (Firestore indexes only - database created via console/gcloud)
+  - database/firestore-indexes.yaml
+  - database/bigquery-dataset.yaml
+  - database/bigquery-table.yaml
+  
+  # 7. IAM bindings (after resources exist)
+  - iam/iam-bindings.yaml
+  
+  # 8. Cloud Run services (after IAM is configured)
+  - run/api-service.yaml
+  - run/processor-job.yaml
+  
+  # 9. Monitoring (last, after services exist)
+  - monitoring/dashboard.yaml
+  - monitoring/alerts.yaml
+
+# Configuration for variable substitution
+# These will be replaced with actual values during deployment
+configurations:
+  - kustomizeconfig.yaml
+
+# Transformers for environment-specific values
+# vars:
+#   - name: PROJECT_ID
+#     objref:
+#       kind: ConfigMap
+#       name: cloudsnap-config
+#       apiVersion: v1
+#     fieldref:
+#       fieldpath: data.PROJECT_ID

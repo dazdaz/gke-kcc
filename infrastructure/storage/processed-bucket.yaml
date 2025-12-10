@@ -1,0 +1,69 @@
+# CloudSnap KCC Demo - Processed Media Bucket
+# This bucket stores processed/optimized media files
+
+apiVersion: storage.cnrm.cloud.google.com/v1beta1
+kind: StorageBucket
+metadata:
+  name: cloudsnap-processed
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: storage
+    tier: processed
+spec:
+  # Bucket location
+  location: US
+  
+  # Storage class for frequently accessed data
+  storageClass: STANDARD
+  
+  # Enable uniform bucket-level access
+  uniformBucketLevelAccess: true
+  
+  # No versioning needed for processed files (can be regenerated)
+  versioning:
+    enabled: false
+  
+  # CORS configuration for frontend access
+  cors:
+    - origin:
+        - "*"  # Configure specific origins in production
+      method:
+        - GET
+        - HEAD
+        - OPTIONS
+      responseHeader:
+        - Content-Type
+        - Content-Length
+        - Cache-Control
+        - ETag
+      maxAgeSeconds: 86400
+  
+  # Lifecycle rules for cost optimization
+  lifecycleRule:
+    # Move to Nearline after 60 days (less frequently accessed)
+    - action:
+        type: SetStorageClass
+        storageClass: NEARLINE
+      condition:
+        age: 60
+        matchesStorageClass:
+          - STANDARD
+    # Move to Coldline after 180 days
+    - action:
+        type: SetStorageClass
+        storageClass: COLDLINE
+      condition:
+        age: 180
+        matchesStorageClass:
+          - NEARLINE
+    # Delete after 2 years
+    - action:
+        type: Delete
+      condition:
+        age: 730
+  
+  # Public access prevention
+  publicAccessPrevention: enforced

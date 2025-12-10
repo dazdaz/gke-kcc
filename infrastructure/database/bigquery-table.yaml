@@ -1,0 +1,150 @@
+# CloudSnap KCC Demo - BigQuery Tables
+# Tables for storing processing events and analytics
+
+apiVersion: bigquery.cnrm.cloud.google.com/v1beta1
+kind: BigQueryTable
+metadata:
+  name: cloudsnap-upload-events
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: analytics
+spec:
+  # Table ID in BigQuery
+  resourceID: upload_events
+  
+  # Reference to the dataset
+  datasetRef:
+    name: cloudsnap-analytics
+  
+  # Description
+  description: "Raw upload events from Pub/Sub subscription"
+  friendlyName: "Upload Events"
+  
+  # Table schema
+  schema: |
+    [
+      {
+        "name": "subscription_name",
+        "type": "STRING",
+        "mode": "NULLABLE",
+        "description": "Pub/Sub subscription name"
+      },
+      {
+        "name": "message_id",
+        "type": "STRING",
+        "mode": "NULLABLE",
+        "description": "Pub/Sub message ID"
+      },
+      {
+        "name": "publish_time",
+        "type": "TIMESTAMP",
+        "mode": "NULLABLE",
+        "description": "When the message was published"
+      },
+      {
+        "name": "data",
+        "type": "STRING",
+        "mode": "NULLABLE",
+        "description": "Base64 encoded message data"
+      },
+      {
+        "name": "attributes",
+        "type": "STRING",
+        "mode": "NULLABLE",
+        "description": "Message attributes as JSON string"
+      }
+    ]
+  
+  # Time partitioning for efficient queries
+  timePartitioning:
+    type: DAY
+    field: publish_time
+    expirationMs: 7776000000
+  
+  # Clustering for faster queries
+  clustering:
+    - subscription_name
+---
+# Processed media metrics table
+apiVersion: bigquery.cnrm.cloud.google.com/v1beta1
+kind: BigQueryTable
+metadata:
+  name: cloudsnap-processing-metrics
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: analytics
+spec:
+  resourceID: processing_metrics
+  
+  datasetRef:
+    name: cloudsnap-analytics
+  
+  description: "Aggregated processing metrics and statistics"
+  friendlyName: "Processing Metrics"
+  
+  schema: |
+    [
+      {
+        "name": "date",
+        "type": "DATE",
+        "mode": "REQUIRED",
+        "description": "Date of the metrics"
+      },
+      {
+        "name": "hour",
+        "type": "INTEGER",
+        "mode": "REQUIRED",
+        "description": "Hour of the day (0-23)"
+      },
+      {
+        "name": "total_uploads",
+        "type": "INTEGER",
+        "mode": "NULLABLE",
+        "description": "Total number of uploads"
+      },
+      {
+        "name": "total_bytes",
+        "type": "INTEGER",
+        "mode": "NULLABLE",
+        "description": "Total bytes uploaded"
+      },
+      {
+        "name": "successful_processing",
+        "type": "INTEGER",
+        "mode": "NULLABLE",
+        "description": "Number of successfully processed files"
+      },
+      {
+        "name": "failed_processing",
+        "type": "INTEGER",
+        "mode": "NULLABLE",
+        "description": "Number of failed processing attempts"
+      },
+      {
+        "name": "avg_processing_time_ms",
+        "type": "FLOAT",
+        "mode": "NULLABLE",
+        "description": "Average processing time in milliseconds"
+      },
+      {
+        "name": "p95_processing_time_ms",
+        "type": "FLOAT",
+        "mode": "NULLABLE",
+        "description": "95th percentile processing time in milliseconds"
+      }
+    ]
+  
+  timePartitioning:
+    type: DAY
+    field: date
+    expirationMs: 31536000000
+  
+  clustering:
+    - date
+    - hour

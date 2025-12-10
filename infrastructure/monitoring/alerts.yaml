@@ -1,0 +1,244 @@
+# CloudSnap KCC Demo - Monitoring Alert Policies
+# Alert policies for operational monitoring
+
+# Alert on processing failures
+apiVersion: monitoring.cnrm.cloud.google.com/v1beta1
+kind: MonitoringAlertPolicy
+metadata:
+  name: cloudsnap-processing-failures
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: monitoring
+spec:
+  displayName: "CloudSnap Processing Failures"
+  
+  # Notification channels (create separately or reference existing)
+  # notificationChannels:
+  #   - name: cloudsnap-email-channel
+  
+  # Alert conditions
+  conditions:
+    - displayName: "High error rate in Cloud Run"
+      conditionThreshold:
+        filter: |
+          resource.type = "cloud_run_revision" AND
+          metric.type = "run.googleapis.com/request_count" AND
+          metric.labels.response_code_class != "2xx" AND
+          resource.labels.service_name = starts_with("cloudsnap")
+        comparison: COMPARISON_GT
+        thresholdValue: 10
+        duration: "300s"
+        aggregations:
+          - alignmentPeriod: "60s"
+            perSeriesAligner: ALIGN_RATE
+            crossSeriesReducer: REDUCE_SUM
+        trigger:
+          count: 1
+  
+  combiner: OR
+  enabled: true
+  
+  # Documentation
+  documentation:
+    content: |
+      ## CloudSnap Processing Failure Alert
+      
+      This alert fires when the error rate for CloudSnap services exceeds 10 errors per second.
+      
+      ### Possible Causes
+      - Media processing failures (corrupted files, unsupported formats)
+      - Storage permission issues
+      - Memory/CPU resource exhaustion
+      - Network connectivity problems
+      
+      ### Remediation Steps
+      1. Check Cloud Run logs: `gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name:cloudsnap"`
+      2. Check Pub/Sub dead letter queue for failed messages
+      3. Verify IAM permissions for service accounts
+      4. Check bucket accessibility
+      
+      ### Escalation
+      Contact the platform team if the issue persists for more than 30 minutes.
+    mimeType: text/markdown
+---
+# Alert on high Pub/Sub backlog
+apiVersion: monitoring.cnrm.cloud.google.com/v1beta1
+kind: MonitoringAlertPolicy
+metadata:
+  name: cloudsnap-pubsub-backlog
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: monitoring
+spec:
+  displayName: "CloudSnap Pub/Sub Backlog High"
+  
+  conditions:
+    - displayName: "High unacknowledged message count"
+      conditionThreshold:
+        filter: |
+          resource.type = "pubsub_subscription" AND
+          metric.type = "pubsub.googleapis.com/subscription/num_undelivered_messages" AND
+          resource.labels.subscription_id = starts_with("cloudsnap")
+        comparison: COMPARISON_GT
+        thresholdValue: 1000
+        duration: "600s"
+        aggregations:
+          - alignmentPeriod: "60s"
+            perSeriesAligner: ALIGN_MEAN
+        trigger:
+          count: 1
+  
+  combiner: OR
+  enabled: true
+  
+  documentation:
+    content: |
+      ## CloudSnap Pub/Sub Backlog Alert
+      
+      This alert fires when the processing backlog exceeds 1000 messages for more than 10 minutes.
+      
+      ### Possible Causes
+      - Processor service is down or scaled to zero
+      - Processor is failing to acknowledge messages
+      - Sudden spike in upload volume
+      
+      ### Remediation Steps
+      1. Check processor status: `gcloud run jobs executions list --job=cloudsnap-processor`
+      2. Check subscription: `gcloud pubsub subscriptions describe cloudsnap-processing-sub`
+      3. Manually trigger processor if needed
+      
+      ### Scaling
+      Consider increasing processor parallelism if this is a recurring issue.
+    mimeType: text/markdown
+---
+# Alert on dead letter queue messages
+apiVersion: monitoring.cnrm.cloud.google.com/v1beta1
+kind: MonitoringAlertPolicy
+metadata:
+  name: cloudsnap-dead-letter-alert
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: monitoring
+spec:
+  displayName: "CloudSnap Dead Letter Messages"
+  
+  conditions:
+    - displayName: "Messages in dead letter queue"
+      conditionThreshold:
+        filter: |
+          resource.type = "pubsub_subscription" AND
+          metric.type = "pubsub.googleapis.com/subscription/num_undelivered_messages" AND
+          resource.labels.subscription_id = "cloudsnap-dead-letter-sub"
+        comparison: COMPARISON_GT
+        thresholdValue: 0
+        duration: "60s"
+        aggregations:
+          - alignmentPeriod: "60s"
+            perSeriesAligner: ALIGN_MEAN
+        trigger:
+          count: 1
+  
+  combiner: OR
+  enabled: true
+  
+  documentation:
+    content: |
+      ## CloudSnap Dead Letter Queue Alert
+      
+      This alert fires when messages appear in the dead letter queue, indicating processing failures.
+      
+      ### Impact
+      Files in the dead letter queue were not processed successfully after multiple retries.
+      
+      ### Remediation Steps
+      1. View dead letter messages:
+         ```
+         gcloud pubsub subscriptions pull cloudsnap-dead-letter-sub --limit=10 --auto-ack=false
+         ```
+      2. Analyze the message content to understand failure reason
+      3. Fix the underlying issue
+      4. Replay messages if needed
+      
+      ### Common Issues
+      - Malformed upload notifications
+      - Files deleted before processing could complete
+      - Unsupported file formats
+    mimeType: text/markdown
+---
+# Alert on high API latency
+apiVersion: monitoring.cnrm.cloud.google.com/v1beta1
+kind: MonitoringAlertPolicy
+metadata:
+  name: cloudsnap-api-latency
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: monitoring
+spec:
+  displayName: "CloudSnap API High Latency"
+  
+  conditions:
+    - displayName: "P95 latency above threshold"
+      conditionThreshold:
+        filter: |
+          resource.type = "cloud_run_revision" AND
+          metric.type = "run.googleapis.com/request_latencies" AND
+          resource.labels.service_name = "cloudsnap-api"
+        comparison: COMPARISON_GT
+        thresholdValue: 5000  # 5 seconds
+        duration: "300s"
+        aggregations:
+          - alignmentPeriod: "60s"
+            perSeriesAligner: ALIGN_PERCENTILE_95
+        trigger:
+          count: 1
+  
+  combiner: OR
+  enabled: true
+  
+  documentation:
+    content: |
+      ## CloudSnap API High Latency Alert
+      
+      This alert fires when API p95 latency exceeds 5 seconds for more than 5 minutes.
+      
+      ### Possible Causes
+      - Firestore query performance issues
+      - Cold starts due to scale-to-zero
+      - Large response payloads
+      - Downstream service latency
+      
+      ### Remediation Steps
+      1. Check Cloud Run metrics for instance count
+      2. Review Firestore query patterns and indexes
+      3. Consider increasing minimum instances to reduce cold starts
+      
+      ### Performance Tips
+      - Use pagination for large result sets
+      - Add appropriate Firestore indexes
+      - Enable response caching where appropriate
+    mimeType: text/markdown
+---
+# Notification channel (email) - uncomment and configure
+# apiVersion: monitoring.cnrm.cloud.google.com/v1beta1
+# kind: MonitoringNotificationChannel
+# metadata:
+#   name: cloudsnap-email-channel
+#   namespace: cloudsnap
+# spec:
+#   displayName: "CloudSnap Email Notifications"
+#   type: email
+#   labels:
+#     email_address: "alerts@example.com"
+#   enabled: true

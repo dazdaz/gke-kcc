@@ -1,0 +1,81 @@
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# GCP credentials and configs (NEVER commit these!)
+*.json
+!infrastructure/**/*.json
+!package.json
+!package-lock.json
+gcloud-*.json
+service-account*.json
+*-credentials.json
+*-key.json
+.gcloud/
+application_default_credentials.json
+
+# Kubernetes
+kubeconfig
+*.kubeconfig
+.kube/
+
+# Kustomize build output
+kustomize-output/
+kustomize-build/
+
+# Shell/script artifacts
+*.log
+*.tmp
+*.bak
+*.pid
+nohup.out
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Terraform (if used alongside KCC)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+
+# Build artifacts
+dist/
+build/
+out/
+
+# Node.js (if used for tooling)
+node_modules/
+npm-debug.log
+
+# Python (if used for tooling)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Secrets and sensitive data
+secrets/
+*.pem
+*.key
+*.crt
+!*.example.pem
+!*.example.key

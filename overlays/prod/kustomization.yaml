@@ -1,0 +1,117 @@
+# CloudSnap KCC Demo - Production Environment Overlay
+# Production-ready configuration with higher availability and longer retention
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: cloudsnap-prod
+
+# Reference the base configuration
+resources:
+  - ../../infrastructure
+
+# Environment-specific labels
+labels:
+  - pairs:
+      environment: prod
+
+# Namespace override
+namespace: cloudsnap-prod
+
+# Patches for prod-specific configurations
+patches:
+  # Enable versioning and longer retention for production
+  - target:
+      kind: StorageBucket
+      name: cloudsnap-raw-uploads
+    patch: |-
+      - op: replace
+        path: /spec/versioning/enabled
+        value: true
+      - op: replace
+        path: /spec/lifecycleRule/2/condition/age
+        value: 730
+
+  - target:
+      kind: StorageBucket
+      name: cloudsnap-processed
+    patch: |-
+      - op: replace
+        path: /spec/versioning/enabled
+        value: true
+      - op: replace
+        path: /spec/lifecycleRule/2/condition/age
+        value: 1095
+
+  # Longer Pub/Sub retention for production
+  - target:
+      kind: PubSubTopic
+    patch: |-
+      - op: replace
+        path: /spec/messageRetentionDuration
+        value: "604800s"
+
+  - target:
+      kind: PubSubSubscription
+    patch: |-
+      - op: replace
+        path: /spec/messageRetentionDuration
+        value: "604800s"
+
+  # Higher Cloud Run resources and scaling for production
+  - target:
+      kind: RunService
+      name: cloudsnap-api
+    patch: |-
+      - op: replace
+        path: /spec/template/containers/0/resources/limits/cpu
+        value: "2"
+      - op: replace
+        path: /spec/template/containers/0/resources/limits/memory
+        value: 1Gi
+      - op: replace
+        path: /spec/template/scaling/minInstanceCount
+        value: 1
+      - op: replace
+        path: /spec/template/scaling/maxInstanceCount
+        value: 100
+
+  - target:
+      kind: RunJob
+      name: cloudsnap-processor
+    patch: |-
+      - op: replace
+        path: /spec/template/template/containers/0/resources/limits/cpu
+        value: "4"
+      - op: replace
+        path: /spec/template/template/containers/0/resources/limits/memory
+        value: 4Gi
+      - op: replace
+        path: /spec/template/parallelism
+        value: 10
+
+  # Longer BigQuery retention for production (365 days)
+  - target:
+      kind: BigQueryDataset
+      name: cloudsnap-analytics
+    patch: |-
+      - op: replace
+        path: /spec/defaultPartitionExpirationMs
+        value: 31536000000
+
+  # Enable all alert policies in production
+  - target:
+      kind: MonitoringAlertPolicy
+    patch: |-
+      - op: replace
+        path: /spec/enabled
+        value: true
+
+# ConfigMap for environment-specific values
+configMapGenerator:
+  - name: cloudsnap-config
+    literals:
+      - PROJECT_ID=${PROJECT_ID}
+      - ENVIRONMENT=prod
+      - LOG_LEVEL=info

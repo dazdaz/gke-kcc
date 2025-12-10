@@ -1,0 +1,45 @@
+# CloudSnap KCC Demo - Firestore Indexes
+# Firestore indexes for common queries
+# Note: The Firestore database must be created separately via console or gcloud:
+# gcloud firestore databases create --location=nam5 --type=firestore-native
+
+apiVersion: firestore.cnrm.cloud.google.com/v1beta1
+kind: FirestoreIndex
+metadata:
+  name: cloudsnap-media-by-status
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: database
+spec:
+  collection: media
+  database: "(default)"
+  fields:
+    - fieldPath: status
+      order: ASCENDING
+    - fieldPath: createdAt
+      order: DESCENDING
+  queryScope: COLLECTION
+---
+# Index for user media queries
+apiVersion: firestore.cnrm.cloud.google.com/v1beta1
+kind: FirestoreIndex
+metadata:
+  name: cloudsnap-media-by-user
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: database
+spec:
+  collection: media
+  database: "(default)"
+  fields:
+    - fieldPath: userId
+      order: ASCENDING
+    - fieldPath: createdAt
+      order: DESCENDING
+  queryScope: COLLECTION

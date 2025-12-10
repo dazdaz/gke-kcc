@@ -1,0 +1,46 @@
+# CloudSnap KCC Demo - Analytics Subscription
+# This subscription delivers messages to the analytics pipeline (BigQuery)
+
+apiVersion: pubsub.cnrm.cloud.google.com/v1beta1
+kind: PubSubSubscription
+metadata:
+  name: cloudsnap-analytics-sub
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: messaging
+    purpose: analytics-pipeline
+spec:
+  topicRef:
+    name: cloudsnap-upload-notifications
+  
+  # Acknowledgment deadline
+  ackDeadlineSeconds: 60
+  
+  # Message retention
+  messageRetentionDuration: "604800s"  # 7 days
+  
+  # Retain acknowledged messages
+  retainAckedMessages: true
+  
+  # Never expire
+  expirationPolicy:
+    ttl: ""
+  
+  # BigQuery subscription - writes directly to BigQuery
+  bigqueryConfig:
+    tableRef:
+      name: cloudsnap-upload-events
+    # Use topic schema if available
+    useTopicSchema: false
+    # Write metadata fields
+    writeMetadata: true
+    # Drop unknown fields instead of failing
+    dropUnknownFields: true
+  
+  # Retry policy
+  retryPolicy:
+    minimumBackoff: "10s"
+    maximumBackoff: "600s"

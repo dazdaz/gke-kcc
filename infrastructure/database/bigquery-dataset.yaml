@@ -1,0 +1,43 @@
+# CloudSnap KCC Demo - BigQuery Dataset
+# Analytics data warehouse for processing events and metrics
+
+apiVersion: bigquery.cnrm.cloud.google.com/v1beta1
+kind: BigQueryDataset
+metadata:
+  name: cloudsnap-analytics
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: analytics
+spec:
+  # Dataset ID in BigQuery
+  resourceID: cloudsnap_analytics
+  
+  # Dataset location
+  location: US
+  
+  # Description
+  description: "CloudSnap analytics data warehouse for processing events and metrics"
+  
+  # Friendly name
+  friendlyName: "CloudSnap Analytics"
+  
+  # Default table expiration (optional - tables don't expire by default)
+  # defaultTableExpirationMs: "3600000"  # 1 hour
+  
+  # Default partition expiration for partitioned tables (90 days)
+  defaultPartitionExpirationMs: 7776000000
+  
+  # Access controls
+  access:
+    # Project viewers can query
+    - role: READER
+      specialGroup: projectReaders
+    # Project editors can modify
+    - role: WRITER
+      specialGroup: projectWriters
+    # Project owners have full control
+    - role: OWNER
+      specialGroup: projectOwners

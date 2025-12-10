@@ -1,0 +1,310 @@
+# CloudSnap KCC Demo - IAM Policy Bindings
+# Defines permissions for service accounts to access GCP resources
+
+# ============================================
+# Uploader Service Account Bindings
+# ============================================
+
+# Allow uploader to create signed URLs and write to raw bucket
+apiVersion: iam.cnrm.cloud.google.com/v1beta1
+kind: IAMPolicyMember
+metadata:
+  name: uploader-raw-bucket-admin
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: iam
+spec:
+  member: serviceAccount:cloudsnap-uploader@${PROJECT_ID}.iam.gserviceaccount.com
+  role: roles/storage.objectAdmin
+  resourceRef:
+    apiVersion: storage.cnrm.cloud.google.com/v1beta1
+    kind: StorageBucket
+    name: cloudsnap-raw-uploads
+---
+# Allow uploader to publish to upload notifications topic
+apiVersion: iam.cnrm.cloud.google.com/v1beta1
+kind: IAMPolicyMember
+metadata:
+  name: uploader-pubsub-publisher
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: iam
+spec:
+  member: serviceAccount:cloudsnap-uploader@${PROJECT_ID}.iam.gserviceaccount.com
+  role: roles/pubsub.publisher
+  resourceRef:
+    apiVersion: pubsub.cnrm.cloud.google.com/v1beta1
+    kind: PubSubTopic
+    name: cloudsnap-upload-notifications
+
+# ============================================
+# Processor Service Account Bindings
+# ============================================
+
+# Allow processor to read from raw bucket
+---
+apiVersion: iam.cnrm.cloud.google.com/v1beta1
+kind: IAMPolicyMember
+metadata:
+  name: processor-raw-bucket-reader
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: iam
+spec:
+  member: serviceAccount:cloudsnap-processor@${PROJECT_ID}.iam.gserviceaccount.com
+  role: roles/storage.objectViewer
+  resourceRef:
+    apiVersion: storage.cnrm.cloud.google.com/v1beta1
+    kind: StorageBucket
+    name: cloudsnap-raw-uploads
+---
+# Allow processor to write to processed bucket
+apiVersion: iam.cnrm.cloud.google.com/v1beta1
+kind: IAMPolicyMember
+metadata:
+  name: processor-processed-bucket-admin
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: iam
+spec:
+  member: serviceAccount:cloudsnap-processor@${PROJECT_ID}.iam.gserviceaccount.com
+  role: roles/storage.objectAdmin
+  resourceRef:
+    apiVersion: storage.cnrm.cloud.google.com/v1beta1
+    kind: StorageBucket
+    name: cloudsnap-processed
+---
+# Allow processor to write to thumbnails bucket
+apiVersion: iam.cnrm.cloud.google.com/v1beta1
+kind: IAMPolicyMember
+metadata:
+  name: processor-thumbnails-bucket-admin
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: iam
+spec:
+  member: serviceAccount:cloudsnap-processor@${PROJECT_ID}.iam.gserviceaccount.com
+  role: roles/storage.objectAdmin
+  resourceRef:
+    apiVersion: storage.cnrm.cloud.google.com/v1beta1
+    kind: StorageBucket
+    name: cloudsnap-thumbnails
+---
+# Allow processor to subscribe to processing queue
+apiVersion: iam.cnrm.cloud.google.com/v1beta1
+kind: IAMPolicyMember
+metadata:
+  name: processor-pubsub-subscriber
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: iam
+spec:
+  member: serviceAccount:cloudsnap-processor@${PROJECT_ID}.iam.gserviceaccount.com
+  role: roles/pubsub.subscriber
+  resourceRef:
+    apiVersion: pubsub.cnrm.cloud.google.com/v1beta1
+    kind: PubSubSubscription
+    name: cloudsnap-processing-sub
+---
+# Allow processor to write to Firestore
+apiVersion: iam.cnrm.cloud.google.com/v1beta1
+kind: IAMPolicyMember
+metadata:
+  name: processor-firestore-user
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: iam
+spec:
+  member: serviceAccount:cloudsnap-processor@${PROJECT_ID}.iam.gserviceaccount.com
+  role: roles/datastore.user
+  resourceRef:
+    apiVersion: resourcemanager.cnrm.cloud.google.com/v1beta1
+    kind: Project
+    external: projects/${PROJECT_ID}
+
+# ============================================
+# API Service Account Bindings
+# ============================================
+
+---
+# Allow API to read from all buckets
+apiVersion: iam.cnrm.cloud.google.com/v1beta1
+kind: IAMPolicyMember
+metadata:
+  name: api-processed-bucket-reader
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: iam
+spec:
+  member: serviceAccount:cloudsnap-api@${PROJECT_ID}.iam.gserviceaccount.com
+  role: roles/storage.objectViewer
+  resourceRef:
+    apiVersion: storage.cnrm.cloud.google.com/v1beta1
+    kind: StorageBucket
+    name: cloudsnap-processed
+---
+apiVersion: iam.cnrm.cloud.google.com/v1beta1
+kind: IAMPolicyMember
+metadata:
+  name: api-thumbnails-bucket-reader
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: iam
+spec:
+  member: serviceAccount:cloudsnap-api@${PROJECT_ID}.iam.gserviceaccount.com
+  role: roles/storage.objectViewer
+  resourceRef:
+    apiVersion: storage.cnrm.cloud.google.com/v1beta1
+    kind: StorageBucket
+    name: cloudsnap-thumbnails
+---
+# Allow API to read/write Firestore
+apiVersion: iam.cnrm.cloud.google.com/v1beta1
+kind: IAMPolicyMember
+metadata:
+  name: api-firestore-user
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: iam
+spec:
+  member: serviceAccount:cloudsnap-api@${PROJECT_ID}.iam.gserviceaccount.com
+  role: roles/datastore.user
+  resourceRef:
+    apiVersion: resourcemanager.cnrm.cloud.google.com/v1beta1
+    kind: Project
+    external: projects/${PROJECT_ID}
+---
+# Allow API to access secrets
+apiVersion: iam.cnrm.cloud.google.com/v1beta1
+kind: IAMPolicyMember
+metadata:
+  name: api-secret-accessor
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: iam
+spec:
+  member: serviceAccount:cloudsnap-api@${PROJECT_ID}.iam.gserviceaccount.com
+  role: roles/secretmanager.secretAccessor
+  resourceRef:
+    apiVersion: secretmanager.cnrm.cloud.google.com/v1beta1
+    kind: SecretManagerSecret
+    name: cloudsnap-api-config
+---
+# Allow API to create signed URLs for raw bucket
+apiVersion: iam.cnrm.cloud.google.com/v1beta1
+kind: IAMPolicyMember
+metadata:
+  name: api-raw-bucket-signer
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: iam
+spec:
+  member: serviceAccount:cloudsnap-api@${PROJECT_ID}.iam.gserviceaccount.com
+  role: roles/storage.objectAdmin
+  resourceRef:
+    apiVersion: storage.cnrm.cloud.google.com/v1beta1
+    kind: StorageBucket
+    name: cloudsnap-raw-uploads
+
+# ============================================
+# Cloud Run Public Access (for demo)
+# ============================================
+
+---
+# Allow unauthenticated access to API service
+apiVersion: iam.cnrm.cloud.google.com/v1beta1
+kind: IAMPolicyMember
+metadata:
+  name: api-public-invoker
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: iam
+spec:
+  member: allUsers
+  role: roles/run.invoker
+  resourceRef:
+    apiVersion: run.cnrm.cloud.google.com/v1beta1
+    kind: RunService
+    name: cloudsnap-api
+
+# ============================================
+# Workload Identity Bindings (for GKE)
+# ============================================
+
+---
+# Bind processor Kubernetes SA to GCP SA
+apiVersion: iam.cnrm.cloud.google.com/v1beta1
+kind: IAMPolicyMember
+metadata:
+  name: processor-workload-identity
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: iam
+spec:
+  member: serviceAccount:${PROJECT_ID}.svc.id.goog[cloudsnap/cloudsnap-processor]
+  role: roles/iam.workloadIdentityUser
+  resourceRef:
+    apiVersion: iam.cnrm.cloud.google.com/v1beta1
+    kind: IAMServiceAccount
+    name: cloudsnap-processor
+---
+# Bind API Kubernetes SA to GCP SA
+apiVersion: iam.cnrm.cloud.google.com/v1beta1
+kind: IAMPolicyMember
+metadata:
+  name: api-workload-identity
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: iam
+spec:
+  member: serviceAccount:${PROJECT_ID}.svc.id.goog[cloudsnap/cloudsnap-api]
+  role: roles/iam.workloadIdentityUser
+  resourceRef:
+    apiVersion: iam.cnrm.cloud.google.com/v1beta1
+    kind: IAMServiceAccount
+    name: cloudsnap-api

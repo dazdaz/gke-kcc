@@ -1,0 +1,61 @@
+# CloudSnap KCC Demo - Thumbnails Bucket
+# This bucket stores generated thumbnail images
+
+apiVersion: storage.cnrm.cloud.google.com/v1beta1
+kind: StorageBucket
+metadata:
+  name: cloudsnap-thumbnails
+  namespace: cloudsnap
+  annotations:
+    cnrm.cloud.google.com/state-into-spec: absent
+  labels:
+    app: cloudsnap
+    component: storage
+    tier: thumbnails
+spec:
+  # Bucket location
+  location: US
+  
+  # Storage class for frequently accessed data
+  storageClass: STANDARD
+  
+  # Enable uniform bucket-level access
+  uniformBucketLevelAccess: true
+  
+  # No versioning needed for thumbnails (can be regenerated)
+  versioning:
+    enabled: false
+  
+  # CORS configuration for frontend access
+  cors:
+    - origin:
+        - "*"  # Configure specific origins in production
+      method:
+        - GET
+        - HEAD
+        - OPTIONS
+      responseHeader:
+        - Content-Type
+        - Content-Length
+        - Cache-Control
+        - ETag
+      maxAgeSeconds: 86400
+  
+  # Lifecycle rules - thumbnails have shorter retention
+  lifecycleRule:
+    # Move to Nearline after 30 days
+    - action:
+        type: SetStorageClass
+        storageClass: NEARLINE
+      condition:
+        age: 30
+        matchesStorageClass:
+          - STANDARD
+    # Delete after 180 days (thumbnails can be regenerated)
+    - action:
+        type: Delete
+      condition:
+        age: 180
+  
+  # Public access prevention
+  publicAccessPrevention: enforced
