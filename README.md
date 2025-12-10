@@ -43,47 +43,46 @@ A demonstration of **Google Kubernetes Engine Config Connector (KCC)** - showing
 The hypothetical CloudSnap platform would work like this (infrastructure is provisioned, but application code is not included):
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                CloudSnap Architecture (Infrastructure Only)          │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  ┌──────────┐     ┌──────────────┐     ┌────────────────────────┐   │
-│  │ Frontend │────▶│ Cloud Run    │────▶│ Firestore (Metadata)   │   │
-│  │ (React)  │     │ API Service  │     └────────────────────────┘   │
-│  │ NOT      │     │ ✅ DEPLOYED  │     │ ✅ PROVISIONED         │   │
-│  │ INCLUDED │     │ (placeholder)│     └────────────────────────┘   │
-│  └──────────┘     └──────────────┘                                  │
-│       │                                                             │
-│       ▼                                                             │
-│  ┌──────────────────────┐                                           │
-│  │ Cloud Storage        │                                           │
-│  │ (Raw Uploads)        │──────┐  ✅ PROVISIONED                    │
-│  └──────────────────────┘      │                                    │
-│                                ▼                                    │
-│                    ┌───────────────────┐                            │
-│                    │ Pub/Sub Topic     │  ✅ PROVISIONED            │
-│                    │ (Notifications)   │                            │
-│                    └───────────────────┘                            │
-│                          │         │                                │
-│           ┌──────────────┘         └──────────────┐                 │
-│           ▼                                        ▼                │
-│  ┌─────────────────┐                    ┌─────────────────┐         │
-│  │ Cloud Run Job   │                    │ BigQuery        │         │
-│  │ (Processor)     │                    │ (Analytics)     │         │
-│  │ ✅ DEPLOYED     │                    │ ✅ PROVISIONED  │         │
-│  │ (placeholder)   │                    └─────────────────┘         │
-│  └─────────────────┘                                                │
-│           │                                                         │
-│           ▼                                                         │
-│  ┌──────────────────────┐    ┌──────────────────────┐               │
-│  │ Cloud Storage        │    │ Cloud Storage        │               │
-│  │ (Processed Media)    │    │ (Thumbnails)         │               │
-│  │ ✅ PROVISIONED       │    │ ✅ PROVISIONED       │               │
-│  └──────────────────────┘    └──────────────────────┘               │
-│                                                                     │
-│  ═══════════════════════════════════════════════════════════════    │
-│       All GCP resources managed by Config Connector via kubectl     │
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│              CloudSnap Architecture (Infrastructure Only)               │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌──────────────┐    ┌──────────────────┐    ┌───────────────────────┐  │
+│  │   Frontend   │───▶│    Cloud Run     │───▶│ Firestore (Metadata)  │  │
+│  │   (React)    │    │   API Service    │    │   ✅ PROVISIONED      │  │
+│  │ NOT INCLUDED │    │  ✅ DEPLOYED     │    └───────────────────────┘  │
+│  └──────────────┘    │   (placeholder)  │                               │
+│         │            └──────────────────┘                               │
+│         ▼                                                               │
+│  ┌────────────────────────┐                                             │
+│  │     Cloud Storage      │                                             │
+│  │     (Raw Uploads)      │────────┐  ✅ PROVISIONED                    │
+│  └────────────────────────┘        │                                    │
+│                                    ▼                                    │
+│                       ┌─────────────────────┐                           │
+│                       │    Pub/Sub Topic    │  ✅ PROVISIONED           │
+│                       │   (Notifications)   │                           │
+│                       └─────────────────────┘                           │
+│                              │       │                                  │
+│               ┌──────────────┘       └──────────────┐                   │
+│               ▼                                     ▼                   │
+│  ┌───────────────────────┐              ┌───────────────────────┐       │
+│  │    Cloud Run Job      │              │       BigQuery        │       │
+│  │     (Processor)       │              │     (Analytics)       │       │
+│  │    ✅ DEPLOYED        │              │   ✅ PROVISIONED      │       │
+│  │    (placeholder)      │              └───────────────────────┘       │
+│  └───────────────────────┘                                              │
+│               │                                                         │
+│               ▼                                                         │
+│  ┌────────────────────────┐    ┌────────────────────────┐               │
+│  │     Cloud Storage      │    │     Cloud Storage      │               │
+│  │   (Processed Media)    │    │     (Thumbnails)       │               │
+│  │    ✅ PROVISIONED      │    │    ✅ PROVISIONED      │               │
+│  └────────────────────────┘    └────────────────────────┘               │
+│                                                                         │
+│  ═══════════════════════════════════════════════════════════════════    │
+│        All GCP resources managed by Config Connector via kubectl        │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 **Legend:**
@@ -268,16 +267,16 @@ After running `./scripts/03-deploy.sh`, you'll have:
 - [Config Connector Samples](https://github.com/GoogleCloudPlatform/k8s-config-connector/tree/master/samples)
 
 ### GCP Services Used in This Demo
-| Service | Documentation | KCC Resource |
-|---------|---------------|--------------|
-| Cloud Storage | [Docs](https://cloud.google.com/storage/docs) | [StorageBucket](https://cloud.google.com/config-connector/docs/reference/resource-docs/storage/storagebucket) |
-| Pub/Sub | [Docs](https://cloud.google.com/pubsub/docs) | [PubSubTopic](https://cloud.google.com/config-connector/docs/reference/resource-docs/pubsub/pubsubtopic), [PubSubSubscription](https://cloud.google.com/config-connector/docs/reference/resource-docs/pubsub/pubsubsubscription) |
-| Cloud Run | [Docs](https://cloud.google.com/run/docs) | [RunService](https://cloud.google.com/config-connector/docs/reference/resource-docs/run/runservice), [RunJob](https://cloud.google.com/config-connector/docs/reference/resource-docs/run/runjob) |
-| BigQuery | [Docs](https://cloud.google.com/bigquery/docs) | [BigQueryDataset](https://cloud.google.com/config-connector/docs/reference/resource-docs/bigquery/bigquerydataset), [BigQueryTable](https://cloud.google.com/config-connector/docs/reference/resource-docs/bigquery/bigquerytable) |
-| Firestore | [Docs](https://cloud.google.com/firestore/docs) | [FirestoreDatabase](https://cloud.google.com/config-connector/docs/reference/resource-docs/firestore/firestoredatabase) |
-| IAM | [Docs](https://cloud.google.com/iam/docs) | [IAMServiceAccount](https://cloud.google.com/config-connector/docs/reference/resource-docs/iam/iamserviceaccount), [IAMPolicyMember](https://cloud.google.com/config-connector/docs/reference/resource-docs/iam/iampolicymember) |
-| Secret Manager | [Docs](https://cloud.google.com/secret-manager/docs) | [SecretManagerSecret](https://cloud.google.com/config-connector/docs/reference/resource-docs/secretmanager/secretmanagersecret) |
-| Cloud Monitoring | [Docs](https://cloud.google.com/monitoring/docs) | [MonitoringDashboard](https://cloud.google.com/config-connector/docs/reference/resource-docs/monitoring/monitoringdashboard), [MonitoringAlertPolicy](https://cloud.google.com/config-connector/docs/reference/resource-docs/monitoring/monitoringalertpolicy) |
+| Service          | Documentation                                        | KCC Resource                                                                                                                                                                                                                                                         |
+|------------------|------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Cloud Storage    | [Docs](https://cloud.google.com/storage/docs)        | [StorageBucket](https://cloud.google.com/config-connector/docs/reference/resource-docs/storage/storagebucket)                                                                                                                                                        |
+| Pub/Sub          | [Docs](https://cloud.google.com/pubsub/docs)         | [PubSubTopic](https://cloud.google.com/config-connector/docs/reference/resource-docs/pubsub/pubsubtopic), [PubSubSubscription](https://cloud.google.com/config-connector/docs/reference/resource-docs/pubsub/pubsubsubscription)                                     |
+| Cloud Run        | [Docs](https://cloud.google.com/run/docs)            | [RunService](https://cloud.google.com/config-connector/docs/reference/resource-docs/run/runservice), [RunJob](https://cloud.google.com/config-connector/docs/reference/resource-docs/run/runjob)                                                                     |
+| BigQuery         | [Docs](https://cloud.google.com/bigquery/docs)       | [BigQueryDataset](https://cloud.google.com/config-connector/docs/reference/resource-docs/bigquery/bigquerydataset), [BigQueryTable](https://cloud.google.com/config-connector/docs/reference/resource-docs/bigquery/bigquerytable)                                   |
+| Firestore        | [Docs](https://cloud.google.com/firestore/docs)      | [FirestoreDatabase](https://cloud.google.com/config-connector/docs/reference/resource-docs/firestore/firestoredatabase)                                                                                                                                              |
+| IAM              | [Docs](https://cloud.google.com/iam/docs)            | [IAMServiceAccount](https://cloud.google.com/config-connector/docs/reference/resource-docs/iam/iamserviceaccount), [IAMPolicyMember](https://cloud.google.com/config-connector/docs/reference/resource-docs/iam/iampolicymember)                                     |
+| Secret Manager   | [Docs](https://cloud.google.com/secret-manager/docs) | [SecretManagerSecret](https://cloud.google.com/config-connector/docs/reference/resource-docs/secretmanager/secretmanagersecret)                                                                                                                                      |
+| Cloud Monitoring | [Docs](https://cloud.google.com/monitoring/docs)     | [MonitoringDashboard](https://cloud.google.com/config-connector/docs/reference/resource-docs/monitoring/monitoringdashboard), [MonitoringAlertPolicy](https://cloud.google.com/config-connector/docs/reference/resource-docs/monitoring/monitoringalertpolicy)       |
 
 ### GKE & Kubernetes
 - [GKE Standard Mode](https://cloud.google.com/kubernetes-engine/docs/concepts/types-of-clusters#standard)

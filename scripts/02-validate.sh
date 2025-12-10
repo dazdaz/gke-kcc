@@ -9,6 +9,7 @@ PROJECT_ID="${PROJECT_ID:-$(gcloud config get-value project)}"
 ENVIRONMENT="${ENVIRONMENT:-dev}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+VERBOSE="${VERBOSE:-true}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -41,6 +42,12 @@ log_fail() {
     echo -e "${RED}[FAIL]${NC} $1"
 }
 
+log_cmd() {
+    if [ "$VERBOSE" = "true" ]; then
+        echo -e "${YELLOW}[CMD]${NC} $*"
+    fi
+}
+
 # Track validation results
 ERRORS=0
 WARNINGS=0
@@ -67,10 +74,12 @@ check_kustomize_build() {
     cp -r "$ROOT_DIR/overlays" "$temp_dir/"
     
     # Substitute variables
+    log_cmd "find $temp_dir -name '*.yaml' ... (substituting \${PROJECT_ID})"
     find "$temp_dir" -name "*.yaml" -type f -exec sed -i.bak "s/\${PROJECT_ID}/${PROJECT_ID:-my-project}/g" {} \;
     find "$temp_dir" -name "*.bak" -type f -delete
     
     # Try to build with kustomize
+    log_cmd "kubectl kustomize $temp_dir/overlays/$ENVIRONMENT"
     if kubectl kustomize "$temp_dir/overlays/$ENVIRONMENT" > /dev/null 2>&1; then
         log_pass "Kustomize build for $ENVIRONMENT environment"
     else
@@ -213,6 +222,7 @@ check_dry_run() {
     log_step "Checking kubectl dry-run (optional)..."
     
     # Check if we can connect to cluster
+    log_cmd "kubectl cluster-info"
     if ! kubectl cluster-info &>/dev/null; then
         log_info "Not connected to a cluster. Skipping dry-run validation."
         log_info "This is normal if the cluster hasn't been created yet."
@@ -220,6 +230,7 @@ check_dry_run() {
     fi
     
     # Check if Config Connector CRDs are installed
+    log_cmd "kubectl get crd storagebuckets.storage.cnrm.cloud.google.com"
     if ! kubectl get crd storagebuckets.storage.cnrm.cloud.google.com &>/dev/null; then
         log_info "Config Connector CRDs not installed. Skipping dry-run."
         log_info "Run ./scripts/01-setup-kcc.sh to install CRDs first."
@@ -234,10 +245,12 @@ check_dry_run() {
     cp -r "$ROOT_DIR/overlays" "$temp_dir/"
     
     # Substitute variables
+    log_cmd "find $temp_dir -name '*.yaml' ... (substituting \${PROJECT_ID})"
     find "$temp_dir" -name "*.yaml" -type f -exec sed -i.bak "s/\${PROJECT_ID}/${PROJECT_ID:-my-project}/g" {} \;
     find "$temp_dir" -name "*.bak" -type f -delete
     
     # Dry-run apply
+    log_cmd "kubectl apply -k $temp_dir/overlays/$ENVIRONMENT --dry-run=server"
     if kubectl apply -k "$temp_dir/overlays/$ENVIRONMENT" --dry-run=server -o yaml > /dev/null 2>&1; then
         log_pass "Server-side dry-run successful"
     else

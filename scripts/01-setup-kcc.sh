@@ -30,7 +30,7 @@ log_error() {
 }
 
 log_cmd() {
-    echo -e "${YELLOW}[CMD]${NC} $1"
+    echo -e "${YELLOW}[CMD]${NC} $1" >&2
 }
 
 # Run gcloud command with optional verbose output
@@ -238,7 +238,9 @@ spec:
 create_namespace() {
     log_info "Creating namespace: $KCC_NAMESPACE..."
     
-    run_kubectl create namespace "$KCC_NAMESPACE" --dry-run=client -o yaml | run_kubectl apply -f -
+    # Create namespace (don't pipe to avoid log output corruption)
+    log_cmd "kubectl create namespace $KCC_NAMESPACE --dry-run=client -o yaml | kubectl apply -f -"
+    kubectl create namespace "$KCC_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
     
     # Annotate namespace with project ID
     run_kubectl annotate namespace "$KCC_NAMESPACE" \
